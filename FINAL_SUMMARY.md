@@ -25,7 +25,7 @@
 - description (TEXT) - Description détaillée ✨ NOUVEAU
 - total_quantity (INT) - Nombre total d'exemplaires
 - available_quantity (INT) - Exemplaires disponibles (calculé automatiquement)
-- publication_year (YEAR) - Année de publication
+- publication_year (SMALLINT) - Année de publication ✨ CORRIGÉ
 - created_at, updated_at (DATETIME)
 ```
 
@@ -155,7 +155,7 @@ GET    /book/:id/history     - Historique d'un livre [ADMIN]
 
 ---
 
-## 🧪 **TESTS THUNDER CLIENT - ORDRE RECOMMANDÉ**
+## 🧪 **TESTS POSTMAN - ORDRE RECOMMANDÉ**
 
 ### 1️⃣ **Test de santé du serveur**
 ```
@@ -205,6 +205,34 @@ Content-Type: application/json
 }
 ```
 
+### 6️⃣ **Ajouter un livre (Admin)**
+```
+POST http://localhost:5000/api/books
+Authorization: Bearer TOKEN_ADMIN
+Content-Type: application/json
+
+{
+  "title": "Le Petit Prince",
+  "author": "Antoine de Saint-Exupéry",
+  "isbn": "978-2-07-040853-7",
+  "genre": "Littérature jeunesse",
+  "description": "L'histoire d'un petit prince qui voyage...",
+  "total_quantity": 5,
+  "publication_year": 1943
+}
+```
+
+### 7️⃣ **Modifier un livre partiellement (Admin)**
+```
+PUT http://localhost:5000/api/books/1
+Authorization: Bearer TOKEN_ADMIN
+Content-Type: application/json
+
+{
+  "total_quantity": 10
+}
+```
+
 ---
 
 ## 📁 **STRUCTURE FINALE DES FICHIERS**
@@ -212,7 +240,7 @@ Content-Type: application/json
 ```
 backend-gestion-biblio/
 ├── 📁 config/
-│   └── db.js                    # Configuration base de données
+│   └── database.js              # Configuration base de données ✅ ACTUEL
 ├── 📁 controllers/
 │   ├── AuthController.js        # Authentification
 │   ├── BookController.js        # Gestion des livres
@@ -234,31 +262,41 @@ backend-gestion-biblio/
 │   └── schema.sql               # Schéma de BDD complet
 ├── .env                         # Variables d'environnement
 ├── package.json                 # Dépendances
-├── app.js                       # Serveur principal
-├── test-server.js               # Serveur de test (actuel)
+├── server.js                    # Serveur principal ✅ ACTUEL
 └── PROJECT_STRUCTURE.md         # Documentation
 ```
 
 ---
 
-## 🎯 **PROCHAINES ÉTAPES**
+## 🎯 **STATUT ACTUEL**
 
-1. **Tester avec Thunder Client** les routes du serveur de test
-2. **Résoudre le problème de connexion MySQL** 
-3. **Activer le serveur principal** avec base de données
-4. **Tester toutes les fonctionnalités** CRUD
-5. **Ajouter les fonctionnalités avancées** (notifications, etc.)
+✅ **FONCTIONNEL :**
+- ✅ Serveur démarré sur port 5000
+- ✅ Base de données connectée et opérationnelle
+- ✅ Authentification (inscription/connexion) testée
+- ✅ Gestion des livres (CRUD) fonctionnelle
+- ✅ Mise à jour partielle des livres implémentée
+- ✅ Validation des données active
+- ✅ Gestion d'erreurs professionnelle
+
+📝 **À TESTER PROCHAINEMENT :**
+- 🔄 Système d'emprunts complet
+- 🔄 Gestion des retours et renouvellements
+- 🔄 Statistiques et dashboards admin
 
 ---
 
 ## 💡 **AMÉLIORATIONS APPORTÉES**
 
 ✅ **Structure de BDD optimisée** avec contraintes et index  
+✅ **Type SMALLINT** pour publication_year (supporte toutes les années)  
 ✅ **Système d'authentification robuste** avec JWT  
 ✅ **Validation complète** des données d'entrée  
+✅ **Mises à jour partielles** des livres (modifiez seulement les champs voulus)  
+✅ **Pool de connexions MySQL** optimisé  
 ✅ **Gestion d'erreurs professionnelle**  
 ✅ **Code modulaire et maintenable**  
 ✅ **Documentation complète**  
 ✅ **Prêt pour la production**  
 
-🎉 **Votre projet est maintenant clean et professionnel !**
+🎉 **Votre projet est maintenant clean, fonctionnel et professionnel !**

@@ -1,39 +1,117 @@
-// // server.js
-
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
-const db = require('./config/db'); // Connexion DB
-const errorHandler = require('./middleware/error.middleware');
 
+// Configuration de la base de données
+const { testConnection } = require('./config/database');
+
+// Importation des routes
 const authRoutes = require('./routes/auth-routes');
-const bookRoutes = require('./routes/books-routes');
-const borrowRoutes = require('./routes/borrowings-routes');
-const reviewRoutes = require('./routes/reviews-routes');
-const notificationRoutes = require('./routes/notifications-routes');
+const bookRoutes = require('./routes/BooksRoutes');
+const borrowingRoutes = require('./routes/BorrowingsRoutes');
+
+// Middlewares
+const errorHandler = require('./middleware/error.middleware');
 
 const app = express();
 
-// Middlewares
-app.use(cors());
-app.use(express.json());
+// Configuration CORS
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true
+}));
 
-// Routes (exemple)
+// Middleware pour parser JSON
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
+
+// Route de santé
 app.get('/', (req, res) => {
-  res.send('Bienvenue sur l’API de la bibliothèque 📚');
+  res.json({
+    success: true,
+    message: '📚 API Gestion de Bibliothèque - Serveur actif',
+    version: '1.0.0',
+    timestamp: new Date().toISOString()
+  });
 });
-// Routes
+
+// Routes API
 app.use('/api/auth', authRoutes);
 app.use('/api/books', bookRoutes);
-app.use('/api/borrowings', borrowRoutes);
-app.use('/api/reviews', reviewRoutes);
-app.use('/api/notifications', notificationRoutes);
+app.use('/api/borrowings', borrowingRoutes);
+
+// Route 404 pour les endpoints non trouvés
+app.use('*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Endpoint non trouvé',
+    path: req.originalUrl
+  });
+});
 
 // Middleware de gestion des erreurs (doit être en dernier)
 app.use(errorHandler);
 
-// Lancer le serveur
+// Démarrage du serveur
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`✅ Serveur démarré sur le port ${PORT}`);
+
+const startServer = async () => {
+  try {
+    // Test de connexion à la base de données
+    const dbConnected = await testConnection();
+    
+    if (!dbConnected) {
+      console.error('❌ Impossible de démarrer le serveur : échec de connexion à la base de données');
+      process.exit(1);
+    }
+    
+    // Démarrage du serveur HTTP
+    app.listen(PORT, () => {
+      console.log('\n🚀 ================================');
+      console.log('📚 API Gestion de Bibliothèque');
+      console.log('================================');
+      console.log(`✅ Serveur démarré sur le port ${PORT}`);
+      console.log(`🌐 URL: http://localhost:${PORT}`);
+      console.log(`🔧 Environnement: ${process.env.NODE_ENV || 'development'}`);
+      console.log('================================\n');
+      
+      // Affichage des routes disponibles en mode développement
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📋 Routes disponibles:');
+        console.log('Auth: http://localhost:' + PORT + '/api/auth/*');
+        console.log('Books: http://localhost:' + PORT + '/api/books/*');
+        console.log('Borrowings: http://localhost:' + PORT + '/api/borrowings/*');
+        console.log('Health: http://localhost:' + PORT + '/\n');
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Erreur lors du démarrage du serveur:', error.message);
+    process.exit(1);
+  }
+};
+
+// Gestion gracieuse de l'arrêt du serveur
+process.on('SIGTERM', () => {
+  console.log('🛑 Signal SIGTERM reçu. Arrêt gracieux du serveur...');
+  process.exit(0);
 });
+
+process.on('SIGINT', () => {
+  console.log('\n🛑 Signal SIGINT reçu. Arrêt gracieux du serveur...');
+  process.exit(0);
+});
+
+// Gestion des erreurs non capturées
+process.on('uncaughtException', (error) => {
+  console.error('❌ Erreur non capturée:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Promesse rejetée non gérée:', reason);
+  process.exit(1);
+});
+
+// Démarrer le serveur
+startServer();

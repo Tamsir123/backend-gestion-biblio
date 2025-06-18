@@ -116,9 +116,27 @@ class BookController {
       }
 
       const { id } = req.params;
-      const bookData = req.body;
+      
+      // Ne prendre que les champs qui sont fournis dans req.body
+      const allowedFields = ['title', 'author', 'isbn', 'genre', 'description', 'total_quantity', 'publication_year'];
+      const updateData = {};
+      
+      // Filtrer pour ne garder que les champs autorisés et non vides
+      allowedFields.forEach(field => {
+        if (req.body[field] !== undefined) {
+          updateData[field] = req.body[field];
+        }
+      });
+      
+      // Vérifier qu'au moins un champ est fourni
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Aucun champ à mettre à jour fourni'
+        });
+      }
 
-      const updated = await Book.update(id, bookData);
+      const updated = await Book.update(id, updateData);
       
       if (!updated) {
         return res.status(404).json({
@@ -129,7 +147,8 @@ class BookController {
 
       res.json({
         success: true,
-        message: 'Livre mis à jour avec succès'
+        message: 'Livre mis à jour avec succès',
+        updatedFields: Object.keys(updateData)
       });
 
     } catch (error) {

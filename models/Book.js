@@ -105,26 +105,46 @@ class Book {
   
   // Mettre à jour un livre
   static async update(id, bookData) {
-    const { title, author, isbn, genre, description, total_quantity, publication_year } = bookData;
+    // Construire la requête dynamiquement selon les champs fournis
+    const fields = Object.keys(bookData);
+    const values = Object.values(bookData);
     
-    // Calculer la nouvelle quantité disponible
-    const currentBook = await queryOne('SELECT available_quantity, total_quantity FROM books WHERE id = ?', [id]);
-    const difference = total_quantity - currentBook.total_quantity;
-    const newAvailableQuantity = Math.max(0, currentBook.available_quantity + difference);
+    if (fields.length === 0) {
+      throw new Error('Aucun champ à mettre à jour');
+    }
+    
+    // Si on modifie la quantité totale, on doit ajuster la quantité disponible
+    if (bookData.total_quantity !== undefined) {
+      // Récupérer les quantités actuelles
+      const currentBook = await queryOne('SELECT available_quantity, total_quantity FROM books WHERE id = ?', [id]);
+      if (currentBook) {
+        const difference = bookData.total_quantity - currentBook.total_quantity;
+        const newAvailableQuantity = Math.max(0, currentBook.available_quantity + difference);
+        
+        // Ajouter available_quantity à la mise à jour si pas déjà présent
+        if (!fields.includes('available_quantity')) {
+          bookData.available_quantity = newAvailableQuantity;
+        }
+      }
+    }
+    
+    // Reconstruire fields et values après modification potentielle
+    const finalFields = Object.keys(bookData);
+    const finalValues = Object.values(bookData);
+    
+    // Construire la partie SET de la requête
+    const setClause = finalFields.map(field => `${field} = ?`).join(', ');
     
     const query = `
       UPDATE books 
-      SET title = ?, author = ?, isbn = ?, genre = ?, description = ?, 
-          total_quantity = ?, available_quantity = ?, publication_year = ?, 
-          updated_at = NOW()
+      SET ${setClause}, updated_at = NOW()
       WHERE id = ?
     `;
     
-    const result = await executeQuery(query, [
-      title, author, isbn, genre, description, 
-      total_quantity, newAvailableQuantity, publication_year, id
-    ]);
+    // Ajouter l'ID à la fin des paramètres
+    finalValues.push(id);
     
+    const result = await executeQuery(query, finalValues);
     return result.affectedRows > 0;
   }
   

@@ -103,6 +103,40 @@ users (1) ←→ (N) notifications
 - ✅ Voir les statistiques et dashboards
 - ✅ Gérer les notifications système
 
+
+## 🏗️ **ARCHITECTURE DE SÉCURITÉ ET ACCÈS**
+
+### 📖 **ACTIONS LIBRES (sans connexion) :**
+Consultables par tous les visiteurs - **Approche bibliothèque réelle**
+- ✅ `GET /api/books` - Voir tous les livres
+- ✅ `GET /api/books/:id` - Détails d'un livre  
+- ✅ `GET /api/books/search` - Rechercher des livres
+- ✅ `GET /api/reviews/book/:id` - Voir les avis d'un livre
+- ✅ `GET /api/reviews/book/:id/stats` - Statistiques d'un livre
+
+**💡 Justification :** Comme dans une vraie bibliothèque, tout le monde peut consulter le catalogue et feuilleter avant de s'inscrire. Cela encourage les inscriptions et facilite la découverte.
+
+### 🔒 **ACTIONS PROTÉGÉES (utilisateur connecté requis) :**
+Nécessitent une authentification JWT
+- 🔒 `POST /api/reviews` - Donner un avis sur un livre
+- 🔒 `POST /api/borrowings` - Emprunter un livre
+- 🔒 `GET /api/borrowings/my-borrowings` - Consulter mes emprunts
+- 🔒 `PUT /api/reviews/:id` - Modifier mon avis
+- 🔒 `DELETE /api/reviews/:id` - Supprimer mon avis
+- 🔒 `GET /api/auth/profile` - Consulter/modifier mon profil
+
+### 🔐 **ACTIONS ADMINISTRATEUR (admin uniquement) :**
+Nécessitent authentification JWT + rôle admin
+- 🔐 `POST /api/books` - Ajouter un livre
+- 🔐 `PUT /api/books/:id` - Modifier un livre
+- 🔐 `DELETE /api/books/:id` - Supprimer un livre
+- 🔐 `GET /api/reviews/pending` - Modérer les avis en attente
+- 🔐 `PUT /api/reviews/:id/moderate` - Valider/rejeter un avis
+- 🔐 `GET /api/borrowings` - Voir tous les emprunts
+- 🔐 `PUT /api/borrowings/:id/return` - Forcer le retour d'un livre
+
+---
+
 ### 🔒 **Sécurité :**
 - **JWT Tokens** pour l'authentification
 - **Bcrypt** pour hasher les mots de passe (12 rounds)

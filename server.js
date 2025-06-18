@@ -9,6 +9,10 @@ const { testConnection } = require('./config/database');
 const authRoutes = require('./routes/auth-routes');
 const bookRoutes = require('./routes/BooksRoutes');
 const borrowingRoutes = require('./routes/BorrowingsRoutes');
+const reviewRoutes = require('./routes/ReviewRoutes');
+
+// Services
+const NotificationScheduler = require('./services/NotificationScheduler');
 
 // Middlewares
 const errorHandler = require('./middleware/error.middleware');
@@ -30,8 +34,16 @@ app.get('/', (req, res) => {
   res.json({
     success: true,
     message: '📚 API Gestion de Bibliothèque - Serveur actif',
-    version: '1.0.0',
-    timestamp: new Date().toISOString()
+    version: '2.0.0',
+    timestamp: new Date().toISOString(),
+    features: [
+      '✅ Authentification JWT',
+      '✅ Gestion des livres',
+      '✅ Système d\'emprunts',
+      '✅ Système d\'avis et commentaires',
+      '✅ Notifications par email',
+      '✅ Tâches automatiques'
+    ]
   });
 });
 
@@ -39,6 +51,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/books', bookRoutes);
 app.use('/api/borrowings', borrowingRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 // Route 404 pour les endpoints non trouvés
 app.use('*', (req, res) => {
@@ -73,7 +86,17 @@ const startServer = async () => {
       console.log(`✅ Serveur démarré sur le port ${PORT}`);
       console.log(`🌐 URL: http://localhost:${PORT}`);
       console.log(`🔧 Environnement: ${process.env.NODE_ENV || 'development'}`);
+      console.log('✨ Fonctionnalités actives:');
+      console.log('   📚 Gestion des livres');
+      console.log('   👥 Authentification utilisateurs');
+      console.log('   📄 Système d\'emprunts');
+      console.log('   ⭐ Avis et commentaires');
+      console.log('   📧 Notifications par email');
+      console.log('   🕐 Tâches automatiques');
       console.log('================================\n');
+      
+      // Démarrer le planificateur de notifications
+      NotificationScheduler.start();
       
       // Affichage des routes disponibles en mode développement
       if (process.env.NODE_ENV === 'development') {
@@ -81,6 +104,7 @@ const startServer = async () => {
         console.log('Auth: http://localhost:' + PORT + '/api/auth/*');
         console.log('Books: http://localhost:' + PORT + '/api/books/*');
         console.log('Borrowings: http://localhost:' + PORT + '/api/borrowings/*');
+        console.log('Reviews: http://localhost:' + PORT + '/api/reviews/*');
         console.log('Health: http://localhost:' + PORT + '/\n');
       }
     });

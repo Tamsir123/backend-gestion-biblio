@@ -104,6 +104,17 @@ users (1) ←→ (N) notifications
 - ✅ Gérer les notifications système
 
 
+## 🧠 ATTRIBUTION AUTOMATIQUE DU RÔLE UTILISATEUR
+
+- Lors de l’inscription et de la connexion, le backend attribue automatiquement le rôle selon l’email :
+    - **admin** si l’email se termine par `@admin.2ie.edu` 
+    - **student** si l’email se termine par `@2ie.edu`
+    - **student** par défaut pour tout autre domaine
+
+- Le champ `role` de la table `users` est donc toujours cohérent avec le domaine de l’email.
+
+---
+
 ## 🏗️ **ARCHITECTURE DE SÉCURITÉ ET ACCÈS**
 
 ### 📖 **ACTIONS LIBRES (sans connexion) :**
@@ -205,7 +216,6 @@ Content-Type: application/json
   "name": "John Doe",
   "email": "john.doe@example.com",
   "password": "Password123",
-  "role": "student"
 }
 ```
 
@@ -235,7 +245,6 @@ Content-Type: application/json
   "name": "Admin User",
   "email": "admin@biblio.com",
   "password": "AdminPass123",
-  "role": "admin"
 }
 ```
 
@@ -334,3 +343,4 @@ backend-gestion-biblio/
 ✅ **Prêt pour la production**  
 
 🎉 **Votre projet est maintenant clean, fonctionnel et professionnel !**
+

@@ -16,7 +16,19 @@ class AuthController {
         });
       }
 
-      const { name, email, password, role } = req.body;
+      const { name, email, password } = req.body;
+      let { role } = req.body;
+
+      // Déterminer le rôle automatiquement si non fourni
+      if (!role) {
+        if (email.endsWith('@admin.2ie.edu') ){
+          role = 'admin';
+        } else if (email.endsWith('@2ie.edu') || email.endsWith('@student.2ie.edu')) {
+          role = 'student';
+        } else {
+          role = 'student'; // Par défaut
+        }
+      }
 
       // Vérifier si l'utilisateur existe déjà
       const existingUser = await User.findByEmail(email);
@@ -37,7 +49,7 @@ class AuthController {
           userId,
           name,
           email,
-          role: role || 'student'
+          role
         }
       });
 
@@ -74,6 +86,20 @@ class AuthController {
         });
       }
 
+      // Déterminer le rôle automatiquement si non défini
+      let role = user.role;
+      if (!role) {
+        if (email.endsWith('@admin.2ie.edu') || email === 'admin@biblio.com') {
+          role = 'admin';
+        } else if (email.endsWith('@2ie.edu') || email.endsWith('@student.2ie.edu')) {
+          role = 'student';
+        } else {
+          role = 'student'; // Par défaut
+        }
+        // Mettre à jour le rôle dans la base si besoin
+        await User.update(user.id, { role });
+      }
+
       // Vérifier le mot de passe
       const isPasswordValid = await User.verifyPassword(password, user.password);
       if (!isPasswordValid) {
@@ -88,7 +114,7 @@ class AuthController {
         { 
           userId: user.id, 
           email: user.email, 
-          role: user.role 
+          role: role 
         },
         process.env.JWT_SECRET,
         { expiresIn: '24h' }
@@ -103,7 +129,7 @@ class AuthController {
             id: user.id,
             name: user.name,
             email: user.email,
-            role: user.role
+            role: role
           }
         }
       });

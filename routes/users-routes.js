@@ -27,6 +27,40 @@ const validateId = [
   param('id').isInt({ min: 1 }).withMessage('ID utilisateur invalide')
 ];
 
+// Validation pour la mise à jour du profil
+const validateProfileUpdate = [
+  body('name').optional().trim().isLength({ min: 2, max: 100 }).withMessage('Le nom doit contenir entre 2 et 100 caractères'),
+  body('phone').optional().trim().isLength({ max: 20 }).withMessage('Numéro de téléphone trop long'),
+  body('address').optional().trim().isLength({ max: 255 }).withMessage('Adresse trop longue'),
+  body('date_of_birth').optional().isISO8601().withMessage('Format de date invalide'),
+  body('department').optional().trim().isLength({ max: 100 }).withMessage('Département trop long'),
+  body('level').optional().isIn(['L1', 'L2', 'L3', 'M1', 'M2', 'PhD']).withMessage('Niveau d\'études invalide'),
+  body('country').optional().trim().isLength({ max: 100 }).withMessage('Pays trop long'),
+  body('city').optional().trim().isLength({ max: 100 }).withMessage('Ville trop longue'),
+  body('emergency_contact_name').optional().trim().isLength({ max: 100 }).withMessage('Nom du contact d\'urgence trop long'),
+  body('emergency_contact_phone').optional().trim().isLength({ max: 20 }).withMessage('Téléphone du contact d\'urgence trop long'),
+  body('bio').optional().trim().isLength({ max: 1000 }).withMessage('Bio trop longue (max 1000 caractères)'),
+  body('favorite_genres').optional().trim().isLength({ max: 500 }).withMessage('Genres préférés trop longs'),
+  body('notification_email').optional().isBoolean().withMessage('Notification email doit être un booléen'),
+  body('notification_sms').optional().isBoolean().withMessage('Notification SMS doit être un booléen'),
+  body('language').optional().isIn(['fr', 'en']).withMessage('Langue invalide'),
+  body('theme').optional().isIn(['light', 'dark', 'auto']).withMessage('Thème invalide'),
+  body('privacy_profile').optional().isIn(['public', 'friends', 'private']).withMessage('Paramètre de confidentialité invalide'),
+  body('receive_recommendations').optional().isBoolean().withMessage('Recommandations doit être un booléen')
+];
+
+// Validation pour le changement de mot de passe
+const validatePasswordChange = [
+  body('currentPassword').notEmpty().withMessage('Mot de passe actuel requis'),
+  body('newPassword').isLength({ min: 6 }).withMessage('Le nouveau mot de passe doit contenir au moins 6 caractères'),
+  body('confirmPassword').custom((value, { req }) => {
+    if (value !== req.body.newPassword) {
+      throw new Error('La confirmation du mot de passe ne correspond pas');
+    }
+    return true;
+  })
+];
+
 // Toutes les routes nécessitent une authentification admin
 router.use(authMiddleware, adminMiddleware);
 
@@ -47,5 +81,26 @@ router.get('/:id/borrowings', validateId, UserController.getBorrowingHistory);
 
 // Obtenir les statistiques d'un utilisateur
 router.get('/:id/stats', validateId, UserController.getUserStats);
+
+// Routes publiques pour les profils utilisateur (avec authentification)
+const userProfileRoutes = express.Router();
+
+// Appliquer l'authentification pour les routes de profil
+userProfileRoutes.use(authMiddleware);
+
+// Obtenir le profil de l'utilisateur connecté
+userProfileRoutes.get('/profile', UserController.getProfile);
+
+// Mettre à jour le profil de l'utilisateur connecté
+userProfileRoutes.put('/profile', validateProfileUpdate, UserController.updateProfile);
+
+// Changer le mot de passe
+userProfileRoutes.put('/profile/password', validatePasswordChange, UserController.changePassword);
+
+// Supprimer le compte utilisateur
+userProfileRoutes.delete('/profile', UserController.deleteAccount);
+
+// Exporter les routes de profil séparément
+router.userProfileRoutes = userProfileRoutes;
 
 module.exports = router;

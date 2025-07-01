@@ -57,6 +57,7 @@ app.use('/api/books', bookRoutes);
 app.use('/api/borrowings', borrowingRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/user', userRoutes.userProfileRoutes); // Routes de profil utilisateur
 
 // Route 404 pour les endpoints non trouvés
 app.use('*', (req, res) => {

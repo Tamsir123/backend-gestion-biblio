@@ -4,17 +4,30 @@ const bcrypt = require('bcrypt');
 class User {
   // Créer un nouvel utilisateur
   static async create(userData) {
-    const { name, email, password, role = 'student' } = userData;
+    const { 
+      name, email, password, role = 'student', 
+      student_id, phone, address, date_of_birth, 
+      department, level, country = 'Burkina Faso', city,
+      emergency_contact_name, emergency_contact_phone, bio
+    } = userData;
     
     // Hasher le mot de passe
     const hashedPassword = await bcrypt.hash(password, 12);
     
     const query = `
-      INSERT INTO users (name, email, password, role) 
-      VALUES (?, ?, ?, ?)
+      INSERT INTO users (
+        name, email, password, role, student_id, phone, address, 
+        date_of_birth, department, level, country, city,
+        emergency_contact_name, emergency_contact_phone, bio
+      ) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     
-    const result = await executeQuery(query, [name, email, hashedPassword, role]);
+    const result = await executeQuery(query, [
+      name, email, hashedPassword, role, student_id, phone, address,
+      date_of_birth, department, level, country, city,
+      emergency_contact_name, emergency_contact_phone, bio
+    ]);
     return result.insertId;
   }
   
@@ -24,8 +37,26 @@ class User {
     return await queryOne(query, [email]);
   }
   
-  // Trouver un utilisateur par ID
+  // Trouver un utilisateur par ID avec détails complets
   static async findById(id) {
+    const query = `
+      SELECT 
+        u.id, u.name, u.email, u.role, u.is_active, u.student_id,
+        u.phone, u.address, u.date_of_birth, u.department, u.level,
+        u.country, u.city, u.emergency_contact_name, u.emergency_contact_phone,
+        u.bio, u.favorite_genres, u.profile_image, u.last_login_at,
+        u.created_at, u.updated_at,
+        up.notification_email, up.notification_sms, up.language, 
+        up.theme, up.privacy_profile, up.receive_recommendations
+      FROM users u
+      LEFT JOIN user_preferences up ON u.id = up.user_id
+      WHERE u.id = ? AND u.is_active = TRUE
+    `;
+    return await queryOne(query, [id]);
+  }
+
+  // Trouver un utilisateur par ID (version simple pour l'auth)
+  static async findByIdSimple(id) {
     const query = `
       SELECT id, name, email, role, is_active, created_at, updated_at 
       FROM users 
@@ -113,6 +144,129 @@ class User {
     `;
     
     return await queryOne(query, [userId, userId, userId, userId, userId]);
+  }
+
+  // Mettre à jour le profil utilisateur
+  static async updateProfile(id, profileData) {
+    try {
+      const allowedFields = [
+        'name', 'phone', 'address', 'date_of_birth', 'department', 
+        'level', 'country', 'city', 'emergency_contact_name', 
+        'emergency_contact_phone', 'bio', 'favorite_genres', 'profile_image'
+      ];
+      
+      const updateData = {};
+      Object.keys(profileData).forEach(key => {
+        if (allowedFields.includes(key) && profileData[key] !== undefined) {
+          updateData[key] = profileData[key];
+        }
+      });
+      
+      if (Object.keys(updateData).length === 0) {
+        throw new Error('Aucun champ valide à mettre à jour');
+      }
+      
+      const fields = Object.keys(updateData);
+      const values = Object.values(updateData);
+      const setClause = fields.map(field => `${field} = ?`).join(', ');
+      
+      const query = `
+        UPDATE users 
+        SET ${setClause}, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `;
+      
+      values.push(id);
+      const result = await executeQuery(query, values);
+      
+      return result.affectedRows > 0;
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du profil:', error);
+      throw error;
+    }
+  }
+
+  // Mettre à jour les préférences utilisateur
+  static async updatePreferences(userId, preferences) {
+    try {
+      const allowedPrefs = [
+        'notification_email', 'notification_sms', 'language', 
+        'theme', 'privacy_profile', 'receive_recommendations'
+      ];
+      
+      const updateData = {};
+      Object.keys(preferences).forEach(key => {
+        if (allowedPrefs.includes(key) && preferences[key] !== undefined) {
+          updateData[key] = preferences[key];
+        }
+      });
+      
+      if (Object.keys(updateData).length === 0) {
+        return false;
+      }
+      
+      const fields = Object.keys(updateData);
+      const values = Object.values(updateData);
+      const setClause = fields.map(field => `${field} = ?`).join(', ');
+      
+      const query = `
+        INSERT INTO user_preferences (user_id, ${fields.join(', ')})
+        VALUES (?, ${fields.map(() => '?').join(', ')})
+        ON DUPLICATE KEY UPDATE 
+        ${setClause}, updated_at = CURRENT_TIMESTAMP
+      `;
+      
+      const result = await executeQuery(query, [userId, ...values, ...values]);
+      return result.affectedRows > 0;
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour des préférences:', error);
+      throw error;
+    }
+  }
+
+  // Enregistrer une connexion
+  static async recordLogin(userId, loginData = {}) {
+    try {
+      const { ip_address, user_agent, device_type = 'desktop', location } = loginData;
+      
+      // Mettre à jour last_login_at
+      await executeQuery(
+        'UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [userId]
+      );
+      
+      // Enregistrer dans l'historique
+      const query = `
+        INSERT INTO user_login_history (user_id, ip_address, user_agent, device_type, location)
+        VALUES (?, ?, ?, ?, ?)
+      `;
+      
+      await executeQuery(query, [userId, ip_address, user_agent, device_type, location]);
+      return true;
+    } catch (error) {
+      console.error('Erreur lors de l\'enregistrement de la connexion:', error);
+      return false;
+    }
+  }
+
+  // Obtenir les statistiques du profil utilisateur
+  static async getProfileStats(userId) {
+    try {
+      const stats = await queryOne(`
+        SELECT 
+          (SELECT COUNT(*) FROM borrowings WHERE user_id = ? AND status = 'active') as active_borrowings,
+          (SELECT COUNT(*) FROM borrowings WHERE user_id = ? AND status = 'returned') as total_returned,
+          (SELECT COUNT(*) FROM borrowings WHERE user_id = ?) as total_borrowings,
+          (SELECT COUNT(*) FROM reviews WHERE user_id = ?) as total_reviews,
+          (SELECT AVG(rating) FROM reviews WHERE user_id = ?) as avg_rating_given,
+          (SELECT COUNT(*) FROM user_login_history WHERE user_id = ? AND login_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)) as logins_last_30_days
+      `, [userId, userId, userId, userId, userId, userId]);
+      
+      return stats;
+    } catch (error) {
+      console.error('Erreur lors de la récupération des statistiques:', error);
+      throw error;
+    }
   }
 }
 

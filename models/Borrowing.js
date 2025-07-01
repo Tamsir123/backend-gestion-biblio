@@ -79,7 +79,10 @@ class Borrowing {
   
   // Obtenir les emprunts d'un utilisateur
   static async findByUserId(userId, status = null, page = 1, limit = 20) {
-    const offset = (page - 1) * limit;
+    const validPage = Math.max(1, parseInt(page) || 1);
+    const validLimit = Math.max(1, Math.min(100, parseInt(limit) || 20));
+    const offset = (validPage - 1) * validLimit;
+    
     let whereClause = 'WHERE br.user_id = ?';
     let params = [userId];
     
@@ -100,10 +103,9 @@ class Borrowing {
       JOIN books b ON br.book_id = b.id
       ${whereClause}
       ORDER BY br.borrowed_at DESC
-      LIMIT ? OFFSET ?
+      LIMIT ${validLimit} OFFSET ${offset}
     `;
     
-    params.push(limit, offset);
     const borrowings = await executeQuery(query, params);
     
     // Compter le total
@@ -112,23 +114,25 @@ class Borrowing {
       FROM borrowings br 
       ${whereClause}
     `;
-    const countParams = params.slice(0, -2);
-    const [{ total }] = await executeQuery(countQuery, countParams);
+    const [{ total }] = await executeQuery(countQuery, params);
     
     return {
       borrowings,
       pagination: {
-        page,
-        limit,
+        page: validPage,
+        limit: validLimit,
         total,
-        totalPages: Math.ceil(total / limit)
+        totalPages: Math.ceil(total / validLimit)
       }
     };
   }
   
   // Obtenir tous les emprunts (admin)
   static async findAll(filters = {}, page = 1, limit = 20) {
-    const offset = (page - 1) * limit;
+    const validPage = Math.max(1, parseInt(page) || 1);
+    const validLimit = Math.max(1, Math.min(100, parseInt(limit) || 20));
+    const offset = (validPage - 1) * validLimit;
+    
     let whereConditions = [];
     let params = [];
     
@@ -169,10 +173,9 @@ class Borrowing {
       JOIN books b ON br.book_id = b.id
       ${whereClause}
       ORDER BY br.borrowed_at DESC
-      LIMIT ? OFFSET ?
+      LIMIT ${validLimit} OFFSET ${offset}
     `;
     
-    params.push(limit, offset);
     const borrowings = await executeQuery(query, params);
     
     // Compter le total
@@ -267,7 +270,9 @@ class Borrowing {
   
   // Historique d'un livre
   static async getBookHistory(bookId, page = 1, limit = 10) {
-    const offset = (page - 1) * limit;
+    const validPage = Math.max(1, parseInt(page) || 1);
+    const validLimit = Math.max(1, Math.min(50, parseInt(limit) || 10));
+    const offset = (validPage - 1) * validLimit;
     
     const query = `
       SELECT br.*, u.name as user_name
@@ -275,10 +280,10 @@ class Borrowing {
       JOIN users u ON br.user_id = u.id
       WHERE br.book_id = ?
       ORDER BY br.borrowed_at DESC
-      LIMIT ? OFFSET ?
+      LIMIT ${validLimit} OFFSET ${offset}
     `;
     
-    const history = await executeQuery(query, [bookId, limit, offset]);
+    const history = await executeQuery(query, [bookId]);
     
     const countQuery = 'SELECT COUNT(*) as total FROM borrowings WHERE book_id = ?';
     const [{ total }] = await executeQuery(countQuery, [bookId]);

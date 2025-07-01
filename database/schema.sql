@@ -77,11 +77,30 @@ CREATE TABLE borrowings (
     INDEX idx_borrowings_user (user_id),
     INDEX idx_borrowings_book (book_id),
     INDEX idx_borrowings_status (status),
-    INDEX idx_borrowings_due_date (due_date),
-    
-    -- Contrainte: un utilisateur ne peut pas emprunter le même livre plusieurs fois en même temps
-    UNIQUE KEY unique_active_borrowing (user_id, book_id, status)
+    INDEX idx_borrowings_due_date (due_date)
 );
+
+-- Trigger pour empêcher les emprunts multiples du même livre par le même utilisateur
+DELIMITER //
+CREATE TRIGGER prevent_multiple_active_borrowings
+BEFORE INSERT ON borrowings
+FOR EACH ROW
+BEGIN
+    DECLARE existing_count INT DEFAULT 0;
+    
+    IF NEW.status = 'active' THEN
+        SELECT COUNT(*) INTO existing_count 
+        FROM borrowings 
+        WHERE user_id = NEW.user_id 
+          AND book_id = NEW.book_id 
+          AND status = 'active';
+          
+        IF existing_count > 0 THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'User already has an active borrowing for this book';
+        END IF;
+    END IF;
+END//
+DELIMITER ;
 
 -- ============================================
 -- TABLE: reviews (Avis et commentaires)
@@ -197,10 +216,6 @@ DELIMITER ;
 -- ============================================
 -- DONNEES DE TEST
 -- ============================================
-
--- Insertion d'un administrateur par défaut
-INSERT INTO users (name, email, password, role) VALUES 
-('Admin Bibliothèque', 'admin@biblio.com', '$2b$10$example_hash_password', 'admin');
 
 -- Exemples d'insertion d'utilisateurs enrichis
 INSERT INTO users (name, email, password, role, is_active, profile_image, phone, address, date_of_birth)

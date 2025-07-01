@@ -1,9 +1,11 @@
-const { executeQuery, queryOne } = require('../config/database');
+const { executeQuery, queryOne, transaction } = require('../config/database');
 
 class Borrowing {
   // Créer un nouvel emprunt
   static async create(borrowingData) {
     const { user_id, book_id, due_date, notes } = borrowingData;
+    // Remplacer undefined par null pour éviter les erreurs SQL
+    const safeNotes = notes === undefined ? null : notes;
     
     return await transaction(async (connection) => {
       // Vérifier la disponibilité du livre
@@ -29,7 +31,7 @@ class Borrowing {
       // Créer l'emprunt
       const [borrowResult] = await connection.execute(
         'INSERT INTO borrowings (user_id, book_id, due_date, notes) VALUES (?, ?, ?, ?)',
-        [user_id, book_id, due_date, notes]
+        [user_id, book_id, due_date, safeNotes]
       );
       
       // Mettre à jour la quantité disponible

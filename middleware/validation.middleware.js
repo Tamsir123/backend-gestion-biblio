@@ -84,9 +84,9 @@ const validateCreateBook = [
     .withMessage('La quantité totale doit être un nombre entier entre 0 et 1000'),
   
   body('publication_year')
-    .optional()
-    .isInt({ min: 1000, max: new Date().getFullYear() })
-    .withMessage('L\'année de publication doit être valide')
+    .exists()
+    .isInt({ min: 1901, max: 2155 })
+    .withMessage("L'année de publication doit être une année sur 4 chiffres entre 1901 et 2155")
 ];
 
 const validateUpdateBook = [
@@ -130,9 +130,9 @@ const validateUpdateBook = [
     .withMessage('La quantité totale doit être un nombre entier entre 0 et 1000'),
   
   body('publication_year')
-    .optional()
-    .isInt({ min: 1000, max: new Date().getFullYear() })
-    .withMessage('L\'année de publication doit être valide')
+    .exists()
+    .isInt({ min: 1901, max: 2155 })
+    .withMessage("L'année de publication doit être une année sur 4 chiffres entre 1901 et 2155")
 ];
 
 // Validations pour les emprunts

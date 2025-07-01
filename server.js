@@ -10,6 +10,7 @@ const authRoutes = require('./routes/auth-routes');
 const bookRoutes = require('./routes/BooksRoutes');
 const borrowingRoutes = require('./routes/BorrowingsRoutes');
 const reviewRoutes = require('./routes/ReviewRoutes');
+const userRoutes = require('./routes/users-routes');
 
 // Services
 const NotificationScheduler = require('./services/NotificationScheduler');
@@ -52,6 +53,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/books', bookRoutes);
 app.use('/api/borrowings', borrowingRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/users', userRoutes);
 
 // Route 404 pour les endpoints non trouvés
 app.use('*', (req, res) => {

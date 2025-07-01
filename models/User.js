@@ -67,6 +67,12 @@ class User {
     };
   }
   
+  // Lister tous les utilisateurs (admin)
+  static async findAll() {
+    const query = 'SELECT id, name, email, role, is_active, profile_image, phone, address, date_of_birth, created_at, updated_at FROM users';
+    return await executeQuery(query);
+  }
+  
   // Mettre à jour un utilisateur
   static async update(id, userData) {
     const { name, email, role, is_active } = userData;

@@ -17,6 +17,10 @@ CREATE TABLE users (
     password VARCHAR(255) NOT NULL,
     role ENUM('student', 'admin') NOT NULL DEFAULT 'student',
     is_active BOOLEAN DEFAULT TRUE,
+    profile_image VARCHAR(255), -- URL ou chemin de l'image de profil
+    phone VARCHAR(20), -- Numéro de téléphone
+    address VARCHAR(255), -- Adresse postale
+    date_of_birth DATE, -- Date de naissance
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
@@ -35,6 +39,7 @@ CREATE TABLE books (
     isbn VARCHAR(20) UNIQUE,
     genre VARCHAR(50),
     description TEXT,
+    cover_image VARCHAR(255), -- Chemin ou URL de la couverture
     total_quantity INT NOT NULL DEFAULT 0 CHECK (total_quantity >= 0),
     available_quantity INT NOT NULL DEFAULT 0 CHECK (available_quantity >= 0),
     publication_year YEAR,
@@ -64,11 +69,10 @@ CREATE TABLE borrowings (
     status ENUM('active', 'returned', 'overdue') NOT NULL DEFAULT 'active',
     renewal_count INT DEFAULT 0 CHECK (renewal_count >= 0),
     notes TEXT,
-    
+    comment_text TEXT,
     -- Clés étrangères
     CONSTRAINT fk_borrowing_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_borrowing_book FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
-    
     -- Index pour optimiser les recherches
     INDEX idx_borrowings_user (user_id),
     INDEX idx_borrowings_book (book_id),
@@ -197,6 +201,16 @@ DELIMITER ;
 -- Insertion d'un administrateur par défaut
 INSERT INTO users (name, email, password, role) VALUES 
 ('Admin Bibliothèque', 'admin@biblio.com', '$2b$10$example_hash_password', 'admin');
+
+-- Exemples d'insertion d'utilisateurs enrichis
+INSERT INTO users (name, email, password, role, is_active, profile_image, phone, address, date_of_birth)
+VALUES
+('Admin Principal', 'admin@biblio.com', '$2b$10$hashadmin', 'admin', TRUE, 'admin.jpg', '+22670000000', '2iE, Ouaga', '1980-01-01'),
+('Awa Traoré', 'awa.traore@etu.2ie-edu.org', '$2b$10$hashawa', 'student', TRUE, 'awa.jpg', '+22670123456', 'Ouagadougou, BF', '2001-05-12'),
+('Moussa Diallo', 'moussa.diallo@etu.2ie-edu.org', '$2b$10$hashmoussa', 'student', TRUE, NULL, '+22670234567', 'Bobo-Dioulasso, BF', '2000-11-23'),
+('Fatoumata Koné', 'fatou.kone@etu.2ie-edu.org', '$2b$10$hashfatou', 'student', TRUE, 'fatou.png', NULL, 'Abidjan, CI', '2002-03-08'),
+('Jean Dupont', 'jean.dupont@etu.2ie-edu.org', '$2b$10$hashjean', 'student', FALSE, NULL, NULL, NULL, NULL);
+-- Les mots de passe sont à remplacer par des hash bcrypt valides en production.
 
 -- Catégories de livres
 INSERT INTO book_categories (name, description) VALUES 

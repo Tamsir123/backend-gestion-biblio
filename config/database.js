@@ -1,4 +1,4 @@
-const mysql = require('mysql2');
+const mysql = require('mysql2/promise');
 require('dotenv').config();
 
 // Configuration de la connexion avec pool pour optimiser les performances
@@ -14,40 +14,13 @@ const dbConfig = {
   charset: 'utf8mb4'
 };
 
-// Création de la connexion
-const db = mysql.createConnection(dbConfig);
-
-// Test de connexion
-const testConnection = async () => {
-  return new Promise((resolve, reject) => {
-    db.connect((err) => {
-      if (err) {
-        console.error('❌ Erreur de connexion à MySQL:', err.message);
-        resolve(false);
-      } else {
-        console.log('✅ Connexion réussie à MySQL');
-        console.log(`📍 Base de données: ${dbConfig.database}`);
-        console.log(`🔗 Host: ${dbConfig.host}:${dbConfig.port}`);
-        resolve(true);
-      }
-    });
-  });
-};
+// Création du pool de connexions
+const pool = mysql.createPool(dbConfig);
 
 // Fonction utilitaire pour exécuter des requêtes
 const executeQuery = async (query, params = []) => {
-  return new Promise((resolve, reject) => {
-    db.query(query, params, (error, results) => {
-      if (error) {
-        console.error('❌ Erreur lors de l\'exécution de la requête:', error.message);
-        console.error('🔍 Requête:', query);
-        console.error('📝 Paramètres:', params);
-        reject(error);
-      } else {
-        resolve(results);
-      }
-    });
-  });
+  const [results] = await pool.execute(query, params);
+  return results;
 };
 
 // Fonction pour obtenir une seule ligne
@@ -56,9 +29,40 @@ const queryOne = async (query, params = []) => {
   return results[0] || null;
 };
 
+// Fonction transactionnelle
+const transaction = async (callback) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const result = await callback(connection);
+    await connection.commit();
+    return result;
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
+};
+
+// Fonction de test de connexion
+const testConnection = async () => {
+  try {
+    const connection = await pool.getConnection();
+    await connection.ping();
+    console.log('✅ Connexion réussie à MySQL');
+    connection.release();
+    return true;
+  } catch (err) {
+    console.error('❌ Erreur de connexion à MySQL:', err.message);
+    return false;
+  }
+};
+
 module.exports = {
-  db,
+  pool,
   executeQuery,
   queryOne,
+  transaction,
   testConnection
 };

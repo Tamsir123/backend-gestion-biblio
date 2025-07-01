@@ -78,6 +78,11 @@ class BookController {
       }
 
       const bookData = req.body;
+
+      // Si une image de couverture a été uploadée, ajouter le chemin au bookData
+      if (req.file) {
+        bookData.cover_image = `/uploads/covers/${req.file.filename}`;
+      }
       const bookId = await Book.create(bookData);
 
       res.status(201).json({

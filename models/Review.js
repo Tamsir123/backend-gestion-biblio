@@ -26,61 +26,91 @@ class Review {
   
   // Obtenir tous les avis d'un livre
   static async findByBookId(bookId, page = 1, limit = 10) {
-    const offset = (page - 1) * limit;
-    
-    const query = `
-      SELECT r.*, u.name as user_name
-      FROM reviews r
-      JOIN users u ON r.user_id = u.id
-      WHERE r.book_id = ? AND r.is_approved = TRUE
-      ORDER BY r.created_at DESC
-      LIMIT ? OFFSET ?
-    `;
-    
-    const reviews = await executeQuery(query, [bookId, limit, offset]);
-    
-    // Compter le total
-    const countQuery = 'SELECT COUNT(*) as total FROM reviews WHERE book_id = ? AND is_approved = TRUE';
-    const [{ total }] = await executeQuery(countQuery, [bookId]);
-    
-    return {
-      reviews,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit)
+    try {
+      // Validation et nettoyage des paramètres
+      const validPage = Math.max(1, parseInt(page) || 1);
+      const validLimit = Math.max(1, Math.min(50, parseInt(limit) || 10));
+      const offset = (validPage - 1) * validLimit;
+      const validBookId = parseInt(bookId);
+      
+      if (!validBookId || isNaN(validBookId)) {
+        throw new Error('ID de livre invalide');
       }
-    };
+      
+      console.log('findByBookId - Paramètres:', { bookId: validBookId, page: validPage, limit: validLimit, offset });
+      
+      const query = `
+        SELECT r.*, u.name as user_name
+        FROM reviews r
+        JOIN users u ON r.user_id = u.id
+        WHERE r.book_id = ? AND r.is_approved = TRUE
+        ORDER BY r.created_at DESC
+        LIMIT ${validLimit} OFFSET ${offset}
+      `;
+      
+      const reviews = await executeQuery(query, [validBookId]);
+      
+      // Compter le total
+      const countQuery = 'SELECT COUNT(*) as total FROM reviews WHERE book_id = ? AND is_approved = TRUE';
+      const countResult = await executeQuery(countQuery, [validBookId]);
+      const total = countResult[0]?.total || 0;
+      
+      return {
+        reviews,
+        pagination: {
+          page: validPage,
+          limit: validLimit,
+          total: parseInt(total),
+          totalPages: Math.ceil(total / validLimit)
+        }
+      };
+    } catch (error) {
+      console.error('Erreur lors de la récupération des avis:', error);
+      throw error;
+    }
   }
   
   // Obtenir les avis d'un utilisateur
   static async findByUserId(userId, page = 1, limit = 10) {
-    const offset = (page - 1) * limit;
-    
-    const query = `
-      SELECT r.*, b.title as book_title, b.author as book_author
-      FROM reviews r
-      JOIN books b ON r.book_id = b.id
-      WHERE r.user_id = ?
-      ORDER BY r.created_at DESC
-      LIMIT ? OFFSET ?
-    `;
-    
-    const reviews = await executeQuery(query, [userId, limit, offset]);
-    
-    const countQuery = 'SELECT COUNT(*) as total FROM reviews WHERE user_id = ?';
-    const [{ total }] = await executeQuery(countQuery, [userId]);
-    
-    return {
-      reviews,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit)
+    try {
+      // Validation et nettoyage des paramètres
+      const validPage = Math.max(1, parseInt(page) || 1);
+      const validLimit = Math.max(1, Math.min(50, parseInt(limit) || 10));
+      const offset = (validPage - 1) * validLimit;
+      const validUserId = parseInt(userId);
+      
+      if (!validUserId || isNaN(validUserId)) {
+        throw new Error('ID utilisateur invalide');
       }
-    };
+      
+      const query = `
+        SELECT r.*, b.title as book_title, b.author as book_author
+        FROM reviews r
+        JOIN books b ON r.book_id = b.id
+        WHERE r.user_id = ?
+        ORDER BY r.created_at DESC
+        LIMIT ${validLimit} OFFSET ${offset}
+      `;
+      
+      const reviews = await executeQuery(query, [validUserId]);
+      
+      const countQuery = 'SELECT COUNT(*) as total FROM reviews WHERE user_id = ?';
+      const countResult = await executeQuery(countQuery, [validUserId]);
+      const total = countResult[0]?.total || 0;
+      
+      return {
+        reviews,
+        pagination: {
+          page: validPage,
+          limit: validLimit,
+          total: parseInt(total),
+          totalPages: Math.ceil(total / validLimit)
+        }
+      };
+    } catch (error) {
+      console.error('Erreur lors de la récupération des avis utilisateur:', error);
+      throw error;
+    }
   }
   
   // Mettre à jour un avis

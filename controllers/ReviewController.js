@@ -50,14 +50,19 @@ class ReviewController {
   // Obtenir les avis d'un livre
   static async getBookReviews(req, res) {
     try {
+      console.log('=== getBookReviews ===');
       const { id } = req.params;
-      const { page = 1, limit = 10 } = req.query;
+      console.log('Book ID:', id);
+      const { page = 1, limit = 20 } = req.query; // Augmenter la limite par défaut
+      console.log('Page:', page, 'Limit:', limit);
 
       const result = await Review.findByBookId(id, parseInt(page), parseInt(limit));
+      console.log('Résultat depuis le modèle:', result);
 
       res.json({
         success: true,
-        data: result
+        reviews: result.reviews, // Le frontend s'attend à 'reviews' directement
+        pagination: result.pagination
       });
 
     } catch (error) {

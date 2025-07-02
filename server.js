@@ -12,6 +12,7 @@ const borrowingRoutes = require('./routes/BorrowingsRoutes');
 const reviewRoutes = require('./routes/ReviewRoutes');
 const userRoutes = require('./routes/users-routes');
 const notificationRoutes = require('./routes/notifications-routes');
+const analyticsRoutes = require('./routes/analytics-routes');
 
 // Services
 const NotificationScheduler = require('./services/NotificationScheduler');
@@ -47,7 +48,8 @@ app.get('/', (req, res) => {
       '✅ Système d\'emprunts',
       '✅ Système d\'avis et commentaires',
       '✅ Notifications par email',
-      '✅ Tâches automatiques'
+      '✅ Tâches automatiques',
+      '✅ Dashboard analytics'
     ]
   });
 });
@@ -60,6 +62,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/user', userRoutes.userProfileRoutes); // Routes de profil utilisateur
 app.use('/api/notifications', notificationRoutes); // Routes de notifications
+app.use('/api/analytics', analyticsRoutes); // Routes analytics pour le dashboard
 
 // Route 404 pour les endpoints non trouvés
 app.use('*', (req, res) => {
@@ -101,6 +104,7 @@ const startServer = async () => {
       console.log('   ⭐ Avis et commentaires');
       console.log('   📧 Notifications par email');
       console.log('   🕐 Tâches automatiques');
+      console.log('   📊 Dashboard analytics');
       console.log('================================\n');
       
       // Démarrer le planificateur de notifications
@@ -114,6 +118,7 @@ const startServer = async () => {
         console.log('Borrowings: http://localhost:' + PORT + '/api/borrowings/*');
         console.log('Reviews: http://localhost:' + PORT + '/api/reviews/*');
         console.log('Notifications: http://localhost:' + PORT + '/api/notifications/*');
+        console.log('Analytics: http://localhost:' + PORT + '/api/analytics/*');
         console.log('Health: http://localhost:' + PORT + '/\n');
       }
     });

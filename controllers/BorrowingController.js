@@ -1,5 +1,7 @@
 const Borrowing = require('../models/Borrowing');
 const Book = require('../models/Book');
+const Notification = require('../models/Notification');
+const EmailService = require('../services/EmailService');
 const { validationResult } = require('express-validator');
 
 class BorrowingController {
@@ -33,6 +35,35 @@ class BorrowingController {
         due_date,
         notes
       });
+
+      // Récupérer les détails du livre et de l'utilisateur pour l'email
+      try {
+        const borrowingDetails = await Borrowing.findById(borrowingId);
+        if (borrowingDetails && borrowingDetails.user_email) {
+          // Créer une notification de confirmation
+          await Notification.create({
+            user_id: user_id,
+            type: 'general',
+            title: `✅ Emprunt confirmé: ${borrowingDetails.book_title}`,
+            message: `Votre emprunt du livre "${borrowingDetails.book_title}" a été confirmé. Date de retour : ${new Date(due_date).toLocaleDateString('fr-FR')}.`,
+            expires_at: new Date(due_date)
+          });
+
+          // Envoyer l'email de confirmation
+          await EmailService.sendBorrowingConfirmation(
+            borrowingDetails.user_email,
+            borrowingDetails.user_name || 'Utilisateur',
+            borrowingDetails.book_title,
+            borrowingDetails.book_author || '',
+            due_date
+          );
+          
+          console.log(`✅ Email de confirmation d'emprunt envoyé à ${borrowingDetails.user_email}`);
+        }
+      } catch (emailError) {
+        console.log('⚠️ Erreur lors de l\'envoi de l\'email de confirmation:', emailError.message);
+        // Ne pas faire échouer l'emprunt si l'email ne peut pas être envoyé
+      }
 
       res.status(201).json({
         success: true,

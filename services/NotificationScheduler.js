@@ -24,19 +24,35 @@ class NotificationScheduler {
       console.log('🔍 Vérification des livres en retard...');
       
       try {
-        const overdueNotifications = await Notification.createOverdueNotifications();
+        const overdueBorrowings = await Notification.getOverdueBorrowings();
         
-        if (overdueNotifications.length > 0) {
-          console.log(`📧 ${overdueNotifications.length} notifications de retard créées`);
+        if (overdueBorrowings.length > 0) {
+          console.log(`📧 ${overdueBorrowings.length} emprunts en retard trouvés`);
           
-          // Envoyer les emails
-          for (const notif of overdueNotifications) {
-            await EmailService.sendOverdueNotification(
-              notif.user_email,
-              notif.user_name,
-              notif.book_title,
-              notif.days_overdue
-            );
+          // Envoyer les emails et créer les notifications
+          for (const borrowing of overdueBorrowings) {
+            try {
+              // Envoyer l'email
+              const emailSent = await EmailService.sendOverdueNotification(
+                borrowing.email,
+                `${borrowing.first_name} ${borrowing.last_name}`,
+                borrowing.book_title,
+                borrowing.days_overdue
+              );
+              
+              if (emailSent) {
+                // Créer la notification dans la base
+                await Notification.createEmailNotification(
+                  borrowing.user_id,
+                  'overdue_email',
+                  borrowing.book_title,
+                  borrowing.days_overdue
+                );
+                console.log(`✅ Email de retard envoyé à ${borrowing.email} pour "${borrowing.book_title}"`);
+              }
+            } catch (error) {
+              console.error(`❌ Erreur envoi email à ${borrowing.email}:`, error.message);
+            }
           }
         } else {
           console.log('✅ Aucun livre en retard trouvé');
@@ -55,18 +71,33 @@ class NotificationScheduler {
       console.log('📝 Envoi des rappels de retour...');
       
       try {
-        const reminderNotifications = await Notification.createReminderNotifications();
+        const borrowingsDueTomorrow = await Notification.getBorrowingsDueTomorrow();
         
-        if (reminderNotifications.length > 0) {
-          console.log(`📧 ${reminderNotifications.length} rappels créés`);
+        if (borrowingsDueTomorrow.length > 0) {
+          console.log(`📧 ${borrowingsDueTomorrow.length} rappels à envoyer`);
           
-          // Envoyer les emails
-          for (const notif of reminderNotifications) {
-            await EmailService.sendReminder(
-              notif.user_email,
-              notif.user_name,
-              notif.book_title
-            );
+          // Envoyer les emails et créer les notifications
+          for (const borrowing of borrowingsDueTomorrow) {
+            try {
+              // Envoyer l'email de rappel
+              const emailSent = await EmailService.sendReminder(
+                borrowing.email,
+                `${borrowing.first_name} ${borrowing.last_name}`,
+                borrowing.book_title
+              );
+              
+              if (emailSent) {
+                // Créer la notification dans la base
+                await Notification.createEmailNotification(
+                  borrowing.user_id,
+                  'reminder_email',
+                  borrowing.book_title
+                );
+                console.log(`✅ Rappel envoyé à ${borrowing.email} pour "${borrowing.book_title}"`);
+              }
+            } catch (error) {
+              console.error(`❌ Erreur envoi rappel à ${borrowing.email}:`, error.message);
+            }
           }
         } else {
           console.log('✅ Aucun rappel à envoyer');
@@ -123,6 +154,88 @@ class NotificationScheduler {
       return reminderNotifications;
     } catch (error) {
       console.error('❌ Erreur:', error);
+      throw error;
+    }
+  }
+  
+  // Méthode pour tester les notifications manuellement (utile pour le développement)
+  static async runOverdueCheckNow() {
+    console.log('🔍 Test manuel: Vérification des livres en retard...');
+    
+    try {
+      const overdueBorrowings = await Notification.getOverdueBorrowings();
+      
+      if (overdueBorrowings.length > 0) {
+        console.log(`📧 ${overdueBorrowings.length} emprunts en retard trouvés`);
+        
+        for (const borrowing of overdueBorrowings) {
+          console.log(`- ${borrowing.first_name} ${borrowing.last_name}: "${borrowing.book_title}" (${borrowing.days_overdue} jours de retard)`);
+          
+          // Envoyer l'email
+          const emailSent = await EmailService.sendOverdueNotification(
+            borrowing.email,
+            `${borrowing.first_name} ${borrowing.last_name}`,
+            borrowing.book_title,
+            borrowing.days_overdue
+          );
+          
+          if (emailSent) {
+            // Créer la notification
+            await Notification.createEmailNotification(
+              borrowing.user_id,
+              'overdue_email',
+              borrowing.book_title,
+              borrowing.days_overdue
+            );
+          }
+        }
+      } else {
+        console.log('✅ Aucun livre en retard trouvé');
+      }
+      
+      return overdueBorrowings;
+    } catch (error) {
+      console.error('❌ Erreur lors du test:', error);
+      throw error;
+    }
+  }
+
+  // Méthode pour tester les rappels manuellement
+  static async runReminderCheckNow() {
+    console.log('📝 Test manuel: Envoi des rappels...');
+    
+    try {
+      const borrowingsDueTomorrow = await Notification.getBorrowingsDueTomorrow();
+      
+      if (borrowingsDueTomorrow.length > 0) {
+        console.log(`📧 ${borrowingsDueTomorrow.length} rappels à envoyer`);
+        
+        for (const borrowing of borrowingsDueTomorrow) {
+          console.log(`- ${borrowing.first_name} ${borrowing.last_name}: "${borrowing.book_title}" (échéance demain)`);
+          
+          // Envoyer l'email
+          const emailSent = await EmailService.sendReminder(
+            borrowing.email,
+            `${borrowing.first_name} ${borrowing.last_name}`,
+            borrowing.book_title
+          );
+          
+          if (emailSent) {
+            // Créer la notification
+            await Notification.createEmailNotification(
+              borrowing.user_id,
+              'reminder_email',
+              borrowing.book_title
+            );
+          }
+        }
+      } else {
+        console.log('✅ Aucun rappel à envoyer');
+      }
+      
+      return borrowingsDueTomorrow;
+    } catch (error) {
+      console.error('❌ Erreur lors du test:', error);
       throw error;
     }
   }

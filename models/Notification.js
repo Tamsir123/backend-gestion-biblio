@@ -141,6 +141,105 @@ class Notification {
     
     return notifications;
   }
+  
+  // Récupérer les emprunts en retard pour les notifications
+  static async getOverdueBorrowings() {
+    const query = `
+      SELECT 
+        b.id as borrowing_id,
+        b.user_id,
+        b.book_id,
+        b.due_date,
+        b.borrowed_at,
+        DATEDIFF(NOW(), b.due_date) as days_overdue,
+        u.name,
+        u.email,
+        bk.title as book_title,
+        bk.author,
+        -- Vérifier si une notification a déjà été envoyée récemment
+        (SELECT COUNT(*) FROM notifications n 
+         WHERE n.user_id = b.user_id 
+         AND n.type = 'overdue' 
+         AND n.title LIKE CONCAT('%', bk.title, '%')
+         AND DATE(n.created_at) = CURDATE()) as notification_sent_today
+      FROM borrowings b
+      JOIN users u ON b.user_id = u.id
+      JOIN books bk ON b.book_id = bk.id
+      WHERE b.status = 'active'
+      AND b.due_date < NOW()
+      HAVING notification_sent_today = 0
+      ORDER BY days_overdue DESC
+    `;
+    
+    return await executeQuery(query);
+  }
+
+  // Récupérer les emprunts qui arrivent à échéance demain (pour les rappels)
+  static async getBorrowingsDueTomorrow() {
+    const query = `
+      SELECT 
+        b.id as borrowing_id,
+        b.user_id,
+        b.book_id,
+        b.due_date,
+        u.name,
+        u.email,
+        bk.title as book_title,
+        bk.author,
+        -- Vérifier si un rappel a déjà été envoyé
+        (SELECT COUNT(*) FROM notifications n 
+         WHERE n.user_id = b.user_id 
+         AND n.type = 'reminder' 
+         AND n.title LIKE CONCAT('%', bk.title, '%')
+         AND DATE(n.created_at) = CURDATE()) as reminder_sent_today
+      FROM borrowings b
+      JOIN users u ON b.user_id = u.id
+      JOIN books bk ON b.book_id = bk.id
+      WHERE b.status = 'active'
+      AND DATE(b.due_date) = DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+      HAVING reminder_sent_today = 0
+    `;
+    
+    return await executeQuery(query);
+  }
+
+  // Créer une notification d'email automatique
+  static async createEmailNotification(userId, type, bookTitle, daysOverdue = 0) {
+    let title, message, dbType;
+    
+    if (type === 'reminder_email') {
+      dbType = 'reminder'; // Utiliser 'reminder' au lieu de 'reminder_email'
+      title = `📚 Rappel: ${bookTitle}`;
+      message = `Votre livre "${bookTitle}" doit être retourné demain.`;
+    } else if (type === 'overdue_email') {
+      dbType = 'overdue'; // Utiliser 'overdue' au lieu de 'overdue_email'
+      title = `⚠️ Retard: ${bookTitle}`;
+      message = `Votre livre "${bookTitle}" est en retard de ${daysOverdue} jour(s).`;
+    }
+    
+    const notificationData = {
+      user_id: userId,
+      type: dbType, // Utiliser le type compatible avec la base
+      title: title,
+      message: message,
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // Expire dans 7 jours
+    };
+    
+    return await this.create(notificationData);
+  }
+
+  // Supprimer les anciennes notifications (nettoyage)
+  static async cleanupOldNotifications(daysOld = 30) {
+    const query = `
+      DELETE FROM notifications 
+      WHERE created_at < DATE_SUB(NOW(), INTERVAL ? DAY)
+      AND is_read = TRUE
+    `;
+    
+    const result = await executeQuery(query, [daysOld]);
+    console.log(`🧹 ${result.affectedRows} anciennes notifications supprimées`);
+    return result.affectedRows;
+  }
 }
 
 module.exports = Notification;

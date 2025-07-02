@@ -11,6 +11,7 @@ const bookRoutes = require('./routes/BooksRoutes');
 const borrowingRoutes = require('./routes/BorrowingsRoutes');
 const reviewRoutes = require('./routes/ReviewRoutes');
 const userRoutes = require('./routes/users-routes');
+const notificationRoutes = require('./routes/notifications-routes');
 
 // Services
 const NotificationScheduler = require('./services/NotificationScheduler');
@@ -58,6 +59,7 @@ app.use('/api/borrowings', borrowingRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/user', userRoutes.userProfileRoutes); // Routes de profil utilisateur
+app.use('/api/notifications', notificationRoutes); // Routes de notifications
 
 // Route 404 pour les endpoints non trouvés
 app.use('*', (req, res) => {
@@ -111,6 +113,7 @@ const startServer = async () => {
         console.log('Books: http://localhost:' + PORT + '/api/books/*');
         console.log('Borrowings: http://localhost:' + PORT + '/api/borrowings/*');
         console.log('Reviews: http://localhost:' + PORT + '/api/reviews/*');
+        console.log('Notifications: http://localhost:' + PORT + '/api/notifications/*');
         console.log('Health: http://localhost:' + PORT + '/\n');
       }
     });

@@ -93,7 +93,7 @@ class Borrowing {
     
     const query = `
       SELECT br.*, 
-             b.title, b.author, b.isbn,
+             b.title, b.author, b.isbn, b.cover_image,
              CASE 
                WHEN br.status = 'active' AND br.due_date < NOW() THEN 'overdue'
                ELSE br.status 
@@ -162,7 +162,7 @@ class Borrowing {
     const query = `
       SELECT br.*, 
              u.name as user_name, u.email as user_email,
-             b.title, b.author, b.isbn,
+             b.title, b.author, b.isbn, b.cover_image,
              CASE 
                WHEN br.status = 'active' AND br.due_date < NOW() THEN 'overdue'
                ELSE br.status 
@@ -216,13 +216,12 @@ class Borrowing {
     
     return true;
   }
-  
-  // Obtenir les emprunts en retard
+   // Obtenir les emprunts en retard
   static async getOverdue() {
     const query = `
       SELECT br.*, 
              u.name as user_name, u.email as user_email,
-             b.title, b.author,
+             b.title, b.author, b.cover_image,
              DATEDIFF(NOW(), br.due_date) as days_overdue
       FROM borrowings br
       JOIN users u ON br.user_id = u.id
@@ -233,13 +232,13 @@ class Borrowing {
     
     return await executeQuery(query);
   }
-  
+
   // Obtenir les emprunts qui arrivent à échéance
   static async getDueSoon(days = 3) {
     const query = `
       SELECT br.*, 
              u.name as user_name, u.email as user_email,
-             b.title, b.author,
+             b.title, b.author, b.cover_image,
              DATEDIFF(br.due_date, NOW()) as days_until_due
       FROM borrowings br
       JOIN users u ON br.user_id = u.id
@@ -297,6 +296,27 @@ class Borrowing {
         totalPages: Math.ceil(total / limit)
       }
     };
+  }
+
+  // Récupérer un emprunt par son ID avec les détails du livre et de l'utilisateur
+  static async findById(borrowingId) {
+    const query = `
+      SELECT br.*, 
+             u.name as user_name, u.email as user_email,
+             b.title as book_title, b.author as book_author, b.isbn, b.cover_image,
+             CASE 
+               WHEN br.status = 'active' AND br.due_date < NOW() THEN 'overdue'
+               ELSE br.status 
+             END as current_status,
+             DATEDIFF(NOW(), br.due_date) as days_overdue
+      FROM borrowings br
+      JOIN users u ON br.user_id = u.id
+      JOIN books b ON br.book_id = b.id
+      WHERE br.id = ?
+    `;
+    
+    const result = await executeQuery(query, [borrowingId]);
+    return result.length > 0 ? result[0] : null;
   }
 }
 

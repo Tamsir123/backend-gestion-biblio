@@ -21,9 +21,9 @@ class AuthController {
 
       // Déterminer le rôle automatiquement si non fourni
       if (!role) {
-        if (email.endsWith('@admin.2ie.edu') ){
+        if (email.endsWith('@admin.2ie.edu.com') ){
           role = 'admin';
-        } else if (email.endsWith('@2ie.edu') || email.endsWith('@student.2ie.edu')) {
+        } else if (email.endsWith('@2ie.edu.com') || email.endsWith('@gmail.com')) {
           role = 'student';
         } else {
           role = 'student'; // Par défaut

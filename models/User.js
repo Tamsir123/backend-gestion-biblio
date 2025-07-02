@@ -4,30 +4,50 @@ const bcrypt = require('bcrypt');
 class User {
   // Créer un nouvel utilisateur
   static async create(userData) {
-    const { 
-      name, email, password, role = 'student', 
-      student_id, phone, address, date_of_birth, 
-      department, level, country = 'Burkina Faso', city,
-      emergency_contact_name, emergency_contact_phone, bio
-    } = userData;
+    const { name, email, password, role = 'student' } = userData;
     
     // Hasher le mot de passe
     const hashedPassword = await bcrypt.hash(password, 12);
     
+    // Préparer les champs optionnels s'ils sont fournis
+    const optionalFields = [];
+    const optionalValues = [];
+    
+    // Liste des champs optionnels autorisés
+    const allowedOptionalFields = [
+      'phone', 'address', 'date_of_birth', 'country', 'city',
+      'student_id', 'department', 'level', 'emergency_contact_name', 
+      'emergency_contact_phone', 'bio'
+    ];
+    
+    allowedOptionalFields.forEach(field => {
+      if (userData[field] !== undefined && userData[field] !== null && userData[field] !== '') {
+        optionalFields.push(field);
+        
+        // Formater la date de naissance pour MySQL
+        if (field === 'date_of_birth') {
+          const date = new Date(userData[field]);
+          optionalValues.push(date.toISOString().split('T')[0]);
+        } else {
+          optionalValues.push(userData[field]);
+        }
+      }
+    });
+    
+    // Construire la requête dynamiquement
+    const baseFields = ['name', 'email', 'password', 'role'];
+    const allFields = [...baseFields, ...optionalFields];
+    const allValues = [name, email, hashedPassword, role, ...optionalValues];
+    
+    const placeholders = allFields.map(() => '?').join(', ');
+    const fieldsStr = allFields.join(', ');
+    
     const query = `
-      INSERT INTO users (
-        name, email, password, role, student_id, phone, address, 
-        date_of_birth, department, level, country, city,
-        emergency_contact_name, emergency_contact_phone, bio
-      ) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO users (${fieldsStr}) 
+      VALUES (${placeholders})
     `;
     
-    const result = await executeQuery(query, [
-      name, email, hashedPassword, role, student_id, phone, address,
-      date_of_birth, department, level, country, city,
-      emergency_contact_name, emergency_contact_phone, bio
-    ]);
+    const result = await executeQuery(query, allValues);
     return result.insertId;
   }
   
@@ -158,7 +178,14 @@ class User {
       const updateData = {};
       Object.keys(profileData).forEach(key => {
         if (allowedFields.includes(key) && profileData[key] !== undefined) {
-          updateData[key] = profileData[key];
+          // Formater la date de naissance pour MySQL (DATE format)
+          if (key === 'date_of_birth' && profileData[key]) {
+            // Convertir ISO string ou Date object en format YYYY-MM-DD
+            const date = new Date(profileData[key]);
+            updateData[key] = date.toISOString().split('T')[0];
+          } else {
+            updateData[key] = profileData[key];
+          }
         }
       });
       

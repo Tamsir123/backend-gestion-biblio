@@ -423,6 +423,48 @@ class UserController {
       });
     }
   }
+
+  // Télécharger une image de profil
+  static async uploadProfileImage(req, res) {
+    try {
+      const userId = req.user.userId;
+      
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: 'Aucun fichier fourni'
+        });
+      }
+
+      // Construire le chemin de l'image
+      const imagePath = `/uploads/profiles/${req.file.filename}`;
+
+      // Mettre à jour le profil utilisateur avec l'image
+      const updated = await User.updateProfile(userId, {
+        profile_image: imagePath
+      });
+
+      if (updated) {
+        res.json({
+          success: true,
+          message: 'Image de profil mise à jour avec succès',
+          data: { profile_image: imagePath }
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: 'Erreur lors de la mise à jour de l\'image'
+        });
+      }
+
+    } catch (error) {
+      console.error('Erreur lors de l\'upload de l\'image:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur interne du serveur'
+      });
+    }
+  }
 }
 
 module.exports = UserController;

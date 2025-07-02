@@ -3,6 +3,7 @@ const router = express.Router();
 const UserController = require('../controllers/UserController');
 const authMiddleware = require('../middleware/auth.middleware');
 const adminMiddleware = require('../middleware/admin.middleware');
+const uploadProfile = require('../middleware/uploadProfile.middleware');
 const { body, param } = require('express-validator');
 
 // Validation pour la création d'utilisateur
@@ -93,6 +94,9 @@ userProfileRoutes.get('/profile', UserController.getProfile);
 
 // Mettre à jour le profil de l'utilisateur connecté
 userProfileRoutes.put('/profile', validateProfileUpdate, UserController.updateProfile);
+
+// Télécharger une image de profil
+userProfileRoutes.post('/profile/image', uploadProfile.single('profile_image'), UserController.uploadProfileImage);
 
 // Changer le mot de passe
 userProfileRoutes.put('/profile/password', validatePasswordChange, UserController.changePassword);

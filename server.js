@@ -22,9 +22,32 @@ const errorHandler = require('./middleware/error.middleware');
 
 const app = express();
 
-// Configuration CORS
+// Configuration CORS - Support pour plusieurs origines de développement
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:8080',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:3001',
+  'http://127.0.0.1:8080'
+].filter(Boolean); // Supprime les valeurs undefined/null
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:8080',
+  origin: (origin, callback) => {
+    // Permettre les requêtes sans origine (comme Postman) en développement
+    if (!origin && process.env.NODE_ENV !== 'production') {
+      return callback(null, true);
+    }
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.log(`❌ CORS: Origine non autorisée: ${origin}`);
+      console.log(`✅ Origines autorisées: ${allowedOrigins.join(', ')}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 

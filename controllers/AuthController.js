@@ -1,9 +1,74 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 const { validationResult } = require('express-validator');
 
+// Configuration des domaines pour la détection automatique des rôles
+const ROLE_DOMAINS = {
+  admin: [
+    '@bibliotheque.2ie.edu',
+    '@admin.2ie.edu',
+    '@staff.2ie.edu',
+    '@direction.2ie.edu',
+    '@biblio.com'
+  ],
+  student: [
+    '@etu.2ie-edu.org',
+    '@student.2ie.edu',
+    '@2ie.edu',
+    '@gmail.com', // Temporaire pour les tests
+    '@yahoo.com',
+    '@hotmail.com'
+  ]
+};
+
+/**
+ * Détecte automatiquement le rôle en fonction du domaine de l'email
+ * @param {string} email - L'adresse email
+ * @returns {string} - Le rôle détecté ('admin' ou 'student')
+ */
+function detectRoleFromEmail(email) {
+  const emailLower = email.toLowerCase();
+  
+  // Vérifier les domaines admin en premier
+  for (const domain of ROLE_DOMAINS.admin) {
+    if (emailLower.includes(domain)) {
+      return 'admin';
+    }
+  }
+  
+  // Vérifier les domaines étudiants
+  for (const domain of ROLE_DOMAINS.student) {
+    if (emailLower.includes(domain)) {
+      return 'student';
+    }
+  }
+  
+  // Par défaut, retourner 'student' si aucun domaine n'est trouvé
+  return 'student';
+}
+
+/**
+ * Génère un token JWT
+ * @param {object} user - Les données de l'utilisateur
+ * @returns {string} - Le token JWT
+ */
+function generateToken(user) {
+  return jwt.sign(
+    { 
+      id: user.id, 
+      email: user.email, 
+      role: user.role 
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+}
+
 class AuthController {
-  // Inscription
+  /**
+   * Inscription d'un nouvel utilisateur
+   */
   static async register(req, res) {
     try {
       // Vérifier les erreurs de validation
@@ -17,39 +82,45 @@ class AuthController {
       }
 
       const { name, email, password } = req.body;
-      let { role } = req.body;
-
-      // Déterminer le rôle automatiquement si non fourni
-      if (!role) {
-        if (email.endsWith('@admin.2ie.edu.com') ){
-          role = 'admin';
-        } else if (email.endsWith('@2ie.edu.com') || email.endsWith('@gmail.com')) {
-          role = 'student';
-        } else {
-          role = 'student'; // Par défaut
-        }
-      }
 
       // Vérifier si l'utilisateur existe déjà
       const existingUser = await User.findByEmail(email);
       if (existingUser) {
         return res.status(409).json({
           success: false,
-          message: 'Cet email est déjà utilisé'
+          message: 'Un utilisateur avec cet email existe déjà'
         });
       }
 
-      // Créer l'utilisateur
-      const userId = await User.create({ name, email, password, role });
+      // Détection automatique du rôle basée sur le domaine email
+      const detectedRole = detectRoleFromEmail(email);
+      console.log(`🔍 Détection automatique du rôle pour ${email}: ${detectedRole}`);
+
+      // Créer l'utilisateur avec le rôle détecté
+      const userData = {
+        name,
+        email,
+        password,
+        role: detectedRole
+      };
+
+      const userId = await User.create(userData);
+
+      // Générer le token
+      const user = await User.findById(userId);
+      const token = generateToken(user);
 
       res.status(201).json({
         success: true,
-        message: 'Utilisateur créé avec succès',
+        message: `Inscription réussie en tant que ${detectedRole}`,
         data: {
-          userId,
-          name,
-          email,
-          role
+          token,
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role
+          }
         }
       });
 
@@ -62,7 +133,9 @@ class AuthController {
     }
   }
 
-  // Connexion
+  /**
+   * Connexion d'un utilisateur
+   */
   static async login(req, res) {
     try {
       // Vérifier les erreurs de validation
@@ -77,7 +150,7 @@ class AuthController {
 
       const { email, password } = req.body;
 
-      // Trouver l'utilisateur
+      // Chercher l'utilisateur
       const user = await User.findByEmail(email);
       if (!user) {
         return res.status(401).json({
@@ -86,18 +159,12 @@ class AuthController {
         });
       }
 
-      // Déterminer le rôle automatiquement si non défini
-      let role = user.role;
-      if (!role) {
-        if (email.endsWith('@admin.2ie.edu') || email === 'admin@biblio.com') {
-          role = 'admin';
-        } else if (email.endsWith('@2ie.edu') || email.endsWith('@student.2ie.edu')) {
-          role = 'student';
-        } else {
-          role = 'student'; // Par défaut
-        }
-        // Mettre à jour le rôle dans la base si besoin
-        await User.update(user.id, { role });
+      // Vérifier si le compte est actif
+      if (!user.is_active) {
+        return res.status(403).json({
+          success: false,
+          message: 'Votre compte a été désactivé. Contactez l\'administrateur.'
+        });
       }
 
       // Vérifier le mot de passe
@@ -109,27 +176,39 @@ class AuthController {
         });
       }
 
-      // Générer le token JWT
-      const token = jwt.sign(
-        { 
-          userId: user.id, 
-          email: user.email, 
-          role: role 
-        },
-        process.env.JWT_SECRET,
-        { expiresIn: '24h' }
-      );
+      // Détection et mise à jour automatique du rôle si nécessaire
+      const detectedRole = detectRoleFromEmail(email);
+      if (user.role !== detectedRole) {
+        console.log(`🔄 Mise à jour automatique du rôle pour ${email}: ${user.role} → ${detectedRole}`);
+        await User.update(user.id, { role: detectedRole });
+        user.role = detectedRole;
+      }
+
+      // Enregistrer la connexion
+      const loginData = {
+        ip_address: req.ip || req.connection.remoteAddress,
+        user_agent: req.get('User-Agent'),
+        device_type: req.get('User-Agent')?.includes('Mobile') ? 'mobile' : 'desktop'
+      };
+      await User.recordLogin(user.id, loginData);
+
+      // Générer le token
+      const token = generateToken(user);
 
       res.json({
         success: true,
-        message: 'Connexion réussie',
+        message: `Connexion réussie en tant que ${user.role}`,
         data: {
           token,
           user: {
             id: user.id,
             name: user.name,
             email: user.email,
-            role: role
+            role: user.role,
+            profile_image: user.profile_image,
+            student_id: user.student_id,
+            department: user.department,
+            level: user.level
           }
         }
       });
@@ -143,10 +222,14 @@ class AuthController {
     }
   }
 
-  // Obtenir le profil utilisateur
+  /**
+   * Obtenir les informations de l'utilisateur connecté
+   */
   static async getProfile(req, res) {
     try {
-      const user = await User.findById(req.user.userId);
+      const userId = req.user.id;
+      const user = await User.findById(userId);
+
       if (!user) {
         return res.status(404).json({
           success: false,
@@ -154,14 +237,24 @@ class AuthController {
         });
       }
 
-      // Obtenir les statistiques de l'utilisateur
-      const stats = await User.getStats(req.user.userId);
-
       res.json({
         success: true,
         data: {
-          user,
-          stats
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          profile_image: user.profile_image,
+          student_id: user.student_id,
+          phone: user.phone,
+          address: user.address,
+          date_of_birth: user.date_of_birth,
+          department: user.department,
+          level: user.level,
+          country: user.country,
+          city: user.city,
+          bio: user.bio,
+          created_at: user.created_at
         }
       });
 
@@ -174,8 +267,10 @@ class AuthController {
     }
   }
 
-  // Mettre à jour le profil
-  static async updateProfile(req, res) {
+  /**
+   * Changer le mot de passe
+   */
+  static async changePassword(req, res) {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -186,48 +281,11 @@ class AuthController {
         });
       }
 
-      const { name, email } = req.body;
-      const userId = req.user.userId;
+      const { currentPassword, newPassword } = req.body;
+      const userId = req.user.id;
 
-      // Vérifier si le nouvel email n'est pas déjà utilisé
-      if (email) {
-        const existingUser = await User.findByEmail(email);
-        if (existingUser && existingUser.id !== userId) {
-          return res.status(409).json({
-            success: false,
-            message: 'Cet email est déjà utilisé'
-          });
-        }
-      }
-
-      // Mettre à jour l'utilisateur
-      const updated = await User.update(userId, { name, email });
-      
-      if (!updated) {
-        return res.status(404).json({
-          success: false,
-          message: 'Utilisateur non trouvé'
-        });
-      }
-
-      res.json({
-        success: true,
-        message: 'Profil mis à jour avec succès'
-      });
-
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour du profil:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erreur interne du serveur'
-      });
-    }
-  }
-
-  // Vérifier la validité du token
-  static async verifyToken(req, res) {
-    try {
-      const user = await User.findById(req.user.userId);
+      // Récupérer l'utilisateur
+      const user = await User.findById(userId);
       if (!user) {
         return res.status(404).json({
           success: false,
@@ -235,18 +293,52 @@ class AuthController {
         });
       }
 
+      // Vérifier le mot de passe actuel
+      const isCurrentPasswordValid = await User.verifyPassword(currentPassword, user.password);
+      if (!isCurrentPasswordValid) {
+        return res.status(400).json({
+          success: false,
+          message: 'Mot de passe actuel incorrect'
+        });
+      }
+
+      // Hasher le nouveau mot de passe
+      const hashedNewPassword = await bcrypt.hash(newPassword, 12);
+
+      // Mettre à jour le mot de passe
+      await User.update(userId, { password: hashedNewPassword });
+
       res.json({
         success: true,
+        message: 'Mot de passe modifié avec succès'
+      });
+
+    } catch (error) {
+      console.error('Erreur lors du changement de mot de passe:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur interne du serveur'
+      });
+    }
+  }
+
+  /**
+   * Vérifier un token JWT
+   */
+  static async verifyToken(req, res) {
+    try {
+      // Si on arrive ici, c'est que le token est valide (grâce au middleware auth)
+      res.json({
+        success: true,
+        message: 'Token valide',
         data: {
           user: {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role
+            id: req.user.id,
+            email: req.user.email,
+            role: req.user.role
           }
         }
       });
-
     } catch (error) {
       console.error('Erreur lors de la vérification du token:', error);
       res.status(500).json({
@@ -256,11 +348,48 @@ class AuthController {
     }
   }
 
-  // Déconnexion (côté client principalement)
+  /**
+   * Déconnexion (côté client principalement)
+   */
   static async logout(req, res) {
+    try {
+      // Pour l'instant, nous n'avons pas de blacklist de tokens
+      // La déconnexion se fait côté client en supprimant le token
+      res.json({
+        success: true,
+        message: 'Déconnexion réussie'
+      });
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur interne du serveur'
+      });
+    }
+  }
+
+  /**
+   * Fonction utilitaire pour tester la détection de rôle
+   */
+  static testRoleDetection(req, res) {
+    const { email } = req.query;
+    
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email requis'
+      });
+    }
+
+    const detectedRole = detectRoleFromEmail(email);
+    
     res.json({
       success: true,
-      message: 'Déconnexion réussie'
+      data: {
+        email,
+        detectedRole,
+        explanation: `Rôle détecté automatiquement basé sur le domaine de l'email`
+      }
     });
   }
 }

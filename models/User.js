@@ -268,7 +268,14 @@ class User {
         VALUES (?, ?, ?, ?, ?)
       `;
       
-      await executeQuery(query, [userId, ip_address, user_agent, device_type, location]);
+      // Convertir undefined en null pour MySQL
+      await executeQuery(query, [
+        userId, 
+        ip_address || null, 
+        user_agent || null, 
+        device_type || 'desktop', 
+        location || null
+      ]);
       return true;
     } catch (error) {
       console.error('Erreur lors de l\'enregistrement de la connexion:', error);

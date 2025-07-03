@@ -16,6 +16,16 @@ router.get('/dashboard-test', AnalyticsController.getDashboardStats);
 router.use(authMiddleware);
 router.use(adminMiddleware);
 
+// Route de test pour vérifier l'authentification admin
+router.get('/test-admin', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Authentification admin réussie',
+    user: req.user,
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Route pour obtenir les statistiques du dashboard
 router.get('/dashboard', AnalyticsController.getDashboardStats);
 

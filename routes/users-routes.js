@@ -30,24 +30,80 @@ const validateId = [
 
 // Validation pour la mise à jour du profil
 const validateProfileUpdate = [
-  body('name').optional().trim().isLength({ min: 2, max: 100 }).withMessage('Le nom doit contenir entre 2 et 100 caractères'),
-  body('phone').optional().trim().isLength({ max: 20 }).withMessage('Numéro de téléphone trop long'),
-  body('address').optional().trim().isLength({ max: 255 }).withMessage('Adresse trop longue'),
-  body('date_of_birth').optional().isISO8601().withMessage('Format de date invalide'),
-  body('department').optional().trim().isLength({ max: 100 }).withMessage('Département trop long'),
-  body('level').optional().isIn(['L1', 'L2', 'L3', 'M1', 'M2', 'PhD']).withMessage('Niveau d\'études invalide'),
-  body('country').optional().trim().isLength({ max: 100 }).withMessage('Pays trop long'),
-  body('city').optional().trim().isLength({ max: 100 }).withMessage('Ville trop longue'),
-  body('emergency_contact_name').optional().trim().isLength({ max: 100 }).withMessage('Nom du contact d\'urgence trop long'),
-  body('emergency_contact_phone').optional().trim().isLength({ max: 20 }).withMessage('Téléphone du contact d\'urgence trop long'),
-  body('bio').optional().trim().isLength({ max: 1000 }).withMessage('Bio trop longue (max 1000 caractères)'),
-  body('favorite_genres').optional().trim().isLength({ max: 500 }).withMessage('Genres préférés trop longs'),
-  body('notification_email').optional().isBoolean().withMessage('Notification email doit être un booléen'),
-  body('notification_sms').optional().isBoolean().withMessage('Notification SMS doit être un booléen'),
-  body('language').optional().isIn(['fr', 'en']).withMessage('Langue invalide'),
-  body('theme').optional().isIn(['light', 'dark', 'auto']).withMessage('Thème invalide'),
-  body('privacy_profile').optional().isIn(['public', 'friends', 'private']).withMessage('Paramètre de confidentialité invalide'),
-  body('receive_recommendations').optional().isBoolean().withMessage('Recommandations doit être un booléen')
+  body('name').optional({ values: 'falsy' }).trim().isLength({ min: 2, max: 100 }).withMessage('Le nom doit contenir entre 2 et 100 caractères'),
+  body('phone').optional({ values: 'falsy' }).trim().isLength({ max: 20 }).withMessage('Numéro de téléphone trop long'),
+  body('address').optional({ values: 'falsy' }).trim().isLength({ max: 255 }).withMessage('Adresse trop longue'),
+  body('date_of_birth').optional({ values: 'falsy' }).custom((value) => {
+    if (value && value !== null && value !== '') {
+      if (!value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        throw new Error('Format de date invalide (YYYY-MM-DD requis)');
+      }
+    }
+    return true;
+  }),
+  body('department').optional({ values: 'falsy' }).trim().isLength({ max: 100 }).withMessage('Département trop long'),
+  body('level').optional({ values: 'falsy' }).custom((value) => {
+    if (value && value !== null && value !== '') {
+      if (!['L1', 'L2', 'L3', 'M1', 'M2', 'PhD'].includes(value)) {
+        throw new Error('Niveau d\'études invalide');
+      }
+    }
+    return true;
+  }),
+  body('country').optional({ values: 'falsy' }).trim().isLength({ max: 100 }).withMessage('Pays trop long'),
+  body('city').optional({ values: 'falsy' }).trim().isLength({ max: 100 }).withMessage('Ville trop longue'),
+  body('emergency_contact_name').optional({ values: 'falsy' }).trim().isLength({ max: 100 }).withMessage('Nom du contact d\'urgence trop long'),
+  body('emergency_contact_phone').optional({ values: 'falsy' }).trim().isLength({ max: 20 }).withMessage('Téléphone du contact d\'urgence trop long'),
+  body('bio').optional({ values: 'falsy' }).trim().isLength({ max: 1000 }).withMessage('Bio trop longue (max 1000 caractères)'),
+  body('favorite_genres').optional({ values: 'falsy' }).trim().isLength({ max: 500 }).withMessage('Genres préférés trop longs'),
+  body('notification_email').optional({ values: 'falsy' }).custom((value) => {
+    if (value !== null && value !== undefined && value !== '') {
+      if (typeof value !== 'boolean') {
+        throw new Error('Notification email doit être un booléen');
+      }
+    }
+    return true;
+  }),
+  body('notification_sms').optional({ values: 'falsy' }).custom((value) => {
+    if (value !== null && value !== undefined && value !== '') {
+      if (typeof value !== 'boolean') {
+        throw new Error('Notification SMS doit être un booléen');
+      }
+    }
+    return true;
+  }),
+  body('language').optional({ values: 'falsy' }).custom((value) => {
+    if (value && value !== null && value !== '') {
+      if (!['fr', 'en'].includes(value)) {
+        throw new Error('Langue invalide');
+      }
+    }
+    return true;
+  }),
+  body('theme').optional({ values: 'falsy' }).custom((value) => {
+    if (value && value !== null && value !== '') {
+      if (!['light', 'dark', 'auto'].includes(value)) {
+        throw new Error('Thème invalide');
+      }
+    }
+    return true;
+  }),
+  body('privacy_profile').optional({ values: 'falsy' }).custom((value) => {
+    if (value && value !== null && value !== '') {
+      if (!['public', 'friends', 'private'].includes(value)) {
+        throw new Error('Paramètre de confidentialité invalide');
+      }
+    }
+    return true;
+  }),
+  body('receive_recommendations').optional({ values: 'falsy' }).custom((value) => {
+    if (value !== null && value !== undefined && value !== '') {
+      if (typeof value !== 'boolean') {
+        throw new Error('Recommandations doit être un booléen');
+      }
+    }
+    return true;
+  })
 ];
 
 // Validation pour le changement de mot de passe

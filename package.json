@@ -9,6 +9,7 @@
     "db:migrate": "mysql -h 127.0.0.1 -P 4002 -u root -p'Tam@1#' < database/schema.sql"
   },
   "dependencies": {
+    "axios": "^1.10.0",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

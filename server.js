@@ -22,11 +22,9 @@ const errorHandler = require('./middleware/error.middleware');
 
 const app = express();
 
-// Configuration CORS - Support pour Render et développement local
+// Configuration CORS - Support pour développement local
 const allowedOrigins = [
   process.env.FRONTEND_URL,
-  'https://biblio-frontend.onrender.com',
-  'https://biblio-frontend-tamsir.onrender.com',
   'http://localhost:3000',
   'http://localhost:3001',
   'http://localhost:8080',
@@ -76,15 +74,6 @@ app.get('/', (req, res) => {
       '✅ Tâches automatiques',
       '✅ Dashboard analytics'
     ]
-  });
-});
-
-// Route de health check pour Docker
-app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
   });
 });
 
@@ -152,8 +141,7 @@ const startServer = async () => {
         console.log('Borrowings: http://localhost:' + PORT + '/api/borrowings/*');
         console.log('Reviews: http://localhost:' + PORT + '/api/reviews/*');
         console.log('Notifications: http://localhost:' + PORT + '/api/notifications/*');
-        console.log('Analytics: http://localhost:' + PORT + '/api/analytics/*');
-        console.log('Health: http://localhost:' + PORT + '/\n');
+        console.log('Analytics: http://localhost:' + PORT + '/api/analytics/*\n');
       }
     });
     

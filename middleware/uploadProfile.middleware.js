@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 
 // Créer le dossier uploads/profiles s'il n'existe pas
-const uploadDir = '/app/uploads/profiles';
+const uploadDir = path.join(__dirname, '..', 'uploads', 'profiles');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -11,7 +11,7 @@ if (!fs.existsSync(uploadDir)) {
 // Configuration du stockage des images de profil
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, '/app/uploads/profiles/');
+    cb(null, path.join(__dirname, '..', 'uploads', 'profiles'));
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);

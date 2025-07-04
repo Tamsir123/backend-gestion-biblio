@@ -4,7 +4,7 @@ const path = require('path');
 // Configuration du stockage des images de couverture
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/covers/');
+    cb(null, '/app/uploads/covers/');
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);

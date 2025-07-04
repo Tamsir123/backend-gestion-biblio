@@ -22,9 +22,11 @@ const errorHandler = require('./middleware/error.middleware');
 
 const app = express();
 
-// Configuration CORS - Support pour plusieurs origines de développement
+// Configuration CORS - Support pour Render et développement local
 const allowedOrigins = [
   process.env.FRONTEND_URL,
+  'https://biblio-frontend.onrender.com',
+  'https://biblio-frontend-tamsir.onrender.com',
   'http://localhost:3000',
   'http://localhost:3001',
   'http://localhost:8080',
@@ -35,8 +37,8 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Permettre les requêtes sans origine (comme Postman) en développement
-    if (!origin && process.env.NODE_ENV !== 'production') {
+    // Permettre les requêtes sans origine (comme curl, téléchargement direct d'images, etc.)
+    if (!origin) {
       return callback(null, true);
     }
     
@@ -56,7 +58,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Servir les fichiers statiques (images uploadées)
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static('/app/uploads'));
 
 // Route de santé
 app.get('/', (req, res) => {
@@ -74,6 +76,15 @@ app.get('/', (req, res) => {
       '✅ Tâches automatiques',
       '✅ Dashboard analytics'
     ]
+  });
+});
+
+// Route de health check pour Docker
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
   });
 });
 

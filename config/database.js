@@ -3,11 +3,11 @@ require('dotenv').config();
 
 // Configuration de la connexion avec pool pour optimiser les performances
 const dbConfig = {
-  host:'127.0.0.1',
-  user:'root',
-  password:'Tam@1#',
-  database:'bibliotheque_web',
-  port:4002,
+  host: process.env.DB_HOST || '127.0.0.1',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || 'Tam@1#',
+  database: process.env.DB_NAME || 'bibliotheque_web',
+  port: process.env.DB_PORT || 4002,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,

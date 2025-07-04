@@ -31,10 +31,8 @@ const allowedOrigins = [
   'http://localhost:8080',
   'http://127.0.0.1:3000',
   'http://127.0.0.1:3001',
-  'http://127.0.0.1:8080',
-  'https://b3d6-197-239-80-131.ngrok-free.app/api/books',
-  // 'http://192.168.10.127:5000'
-].filter(Boolean); // Supprime les valeurs undefined/null
+  'http://127.0.0.1:8080'
+].filter((v, i, arr) => Boolean(v) && arr.indexOf(v) === i); // Supprime doublons et valeurs vides
 
 app.use(cors({
   origin: (origin, callback) => {

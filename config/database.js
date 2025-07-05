@@ -7,7 +7,7 @@ const dbConfig = {
   user:'root',
   password:'Tam@1#',
   database:'bibliotheque_web',
-  port:4002,
+  port:3306,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,

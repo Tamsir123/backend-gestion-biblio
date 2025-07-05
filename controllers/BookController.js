@@ -111,6 +111,7 @@ class BookController {
   // Mettre à jour un livre (admin only)
   static async update(req, res) {
     try {
+      console.log('[ROUTE] PUT /api/books/:id appelée');
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         return res.status(400).json({
@@ -141,6 +142,13 @@ class BookController {
         });
       }
 
+      // LOG: Afficher le body reçu pour debug frontend
+      console.log('--- [BOOK UPDATE] ---');
+      console.log('ID du livre à modifier:', req.params.id);
+      console.log('Body reçu:', req.body);
+      // LOG: Afficher les champs retenus pour la mise à jour
+      console.log('Champs réellement mis à jour:', updateData);
+      
       const updated = await Book.update(id, updateData);
       
       if (!updated) {

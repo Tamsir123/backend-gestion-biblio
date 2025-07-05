@@ -15,11 +15,13 @@ const { body } = require('express-validator');
 
 // Middleware pour supprimer les champs vides du body
 function cleanEmptyFields(req, res, next) {
+  console.log('[MIDDLEWARE] cleanEmptyFields - body avant nettoyage:', req.body);
   Object.keys(req.body).forEach(key => {
     if (req.body[key] === "" || req.body[key] === null) {
       delete req.body[key];
     }
   });
+  console.log('[MIDDLEWARE] cleanEmptyFields - body après nettoyage:', req.body);
   next();
 }
 

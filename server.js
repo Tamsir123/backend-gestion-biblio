@@ -81,6 +81,14 @@ app.get('/', (req, res) => {
 // Routes API
 app.use('/api/auth', authRoutes);
 app.use('/api/books', bookRoutes);
+// Log global pour toutes les requêtes PUT sur /api/books/:id
+app.use('/api/books/:id', (req, res, next) => {
+  if (req.method === 'PUT') {
+    console.log('[DEBUG PUT /api/books/:id] Headers:', req.headers);
+    console.log('[DEBUG PUT /api/books/:id] Body:', req.body);
+  }
+  next();
+});
 app.use('/api/borrowings', borrowingRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/users', userRoutes);

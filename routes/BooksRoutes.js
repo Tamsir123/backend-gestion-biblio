@@ -13,6 +13,16 @@ const {
 } = require('../middleware/validation.middleware');
 const { body } = require('express-validator');
 
+// Middleware pour supprimer les champs vides du body
+function cleanEmptyFields(req, res, next) {
+  Object.keys(req.body).forEach(key => {
+    if (req.body[key] === "" || req.body[key] === null) {
+      delete req.body[key];
+    }
+  });
+  next();
+}
+
 // Validation pour créer un avis
 const validateCreateReview = [
   body('rating').isInt({ min: 1, max: 5 }).withMessage('La note doit être entre 1 et 5'),
@@ -43,7 +53,7 @@ router.post('/:id/reviews', validateId, validateCreateReview, (req, res, next) =
 
 // Routes administrateur uniquement
 router.post('/', adminMiddleware, uploadCover.single('cover_image'), validateCreateBook, BookController.create);
-router.put('/:id', adminMiddleware, validateUpdateBook, BookController.update);
+router.put('/:id', adminMiddleware, cleanEmptyFields, validateUpdateBook, BookController.update);
 router.delete('/:id', adminMiddleware, validateId, BookController.delete);
 router.get('/admin/stats', adminMiddleware, BookController.getStats);
 

@@ -127,12 +127,7 @@ const validateUpdateBook = [
   body('total_quantity')
     .optional()
     .isInt({ min: 0, max: 1000 })
-    .withMessage('La quantité totale doit être un nombre entier entre 0 et 1000'),
-  
-  body('publication_year')
-    .exists()
-    .isInt({ min: 1901, max: 2155 })
-    .withMessage("L'année de publication doit être une année sur 4 chiffres entre 1901 et 2155")
+    .withMessage('La quantité totale doit être un nombre entier entre 0 et 1000')
 ];
 
 // Validations pour les emprunts
@@ -211,20 +206,28 @@ const validatePagination = [
     .withMessage('La limite doit être un entier entre 1 et 100')
 ];
 
+// Middleware pour supprimer les champs vides ou null du body
+function cleanEmptyFields(req, res, next) {
+  Object.keys(req.body).forEach(key => {
+    if (req.body[key] === "" || req.body[key] === null) {
+      delete req.body[key];
+    }
+  });
+  next();
+}
+
 module.exports = {
   // Authentification
   validateRegister,
   validateLogin,
   validateUpdateProfile,
-  
   // Livres
   validateCreateBook,
   validateUpdateBook,
-  
+  cleanEmptyFields,
   // Emprunts
   validateCreateBorrowing,
   validateRenewBorrowing,
-  
   // Commun
   validateId,
   validatePagination
